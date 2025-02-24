@@ -1,8 +1,12 @@
 terraform {
   required_providers {
-    terraform = {
-      source  = "builtin/terraform"
-      version = ""
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    tfe = {
+      source  = "hashicorp/tfe"
+      version = "~> 0.0"
     }
   }
 }
@@ -33,46 +37,46 @@ locals {
 # RESOURCES
 ##################################################################################
 
-# resource "aws_instance" "main" {
-#   count         = length(data.tfe_outputs.networking.nonsensitive_values.public_subnets)
-#   ami           = nonsensitive(data.aws_ssm_parameter.amzn2_linux.value)
-#   instance_type = var.instance_type
-#   subnet_id     = var.data.tfe_outputs.networking.nonsensitive_values.public_subnets
-#   vpc_security_group_ids = [
-#     aws_security_group.webapp_http_inbound_sg.id,
-#     aws_security_group.webapp_ssh_inbound_sg.id,
-#     aws_security_group.webapp_outbound_sg.id,
-#   ]
-#
-#   key_name = module.ssh_keys.key_pair_name
-#
-#   tags = merge(local.common_tags, {
-#     "Name" = "${local.name_prefix}-webapp-${count.index}"
-#   })
-#
-#   # Provisioner Stuff
-#   connection {
-#     type        = "ssh"
-#     user        = "ec2-user"
-#     port        = "22"
-#     host        = self.public_ip
-#     private_key = module.ssh_keys.private_key_openssh
-#   }
-#
-#   provisioner "file" {
-#     source      = "./templates/userdata.sh"
-#     destination = "/home/ec2-user/userdata.sh"
-#   }
-#
-#   provisioner "remote-exec" {
-#     inline = [
-#       "chmod +x /home/ec2-user/userdata.sh",
-#       "sh /home/ec2-user/userdata.sh",
-#     ]
-#     on_failure = continue
-#   }
-#
-# }
+resource "aws_instance" "main" {
+  count         = length(data.tfe_outputs.networking.nonsensitive_values.public_subnets)
+  ami           = nonsensitive(data.aws_ssm_parameter.amzn2_linux.value)
+  instance_type = var.instance_type
+  subnet_id = var.data.tfe_outputs.networking.nonsensitive_values.public_subnets[0]
+  vpc_security_group_ids = [
+    aws_security_group.webapp_http_inbound_sg.id,
+    aws_security_group.webapp_ssh_inbound_sg.id,
+    aws_security_group.webapp_outbound_sg.id,
+  ]
+
+  key_name = module.ssh_keys.key_pair_name
+
+  tags = merge(local.common_tags, {
+    "Name" = "${local.name_prefix}-webapp-${count.index}"
+  })
+
+  # Provisioner Stuff
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    port        = "22"
+    host        = self.public_ip
+    private_key = module.ssh_keys.private_key_openssh
+  }
+
+  provisioner "file" {
+    source      = "./templates/userdata.sh"
+    destination = "/home/ec2-user/userdata.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /home/ec2-user/userdata.sh",
+      "sh /home/ec2-user/userdata.sh",
+    ]
+    on_failure = continue
+  }
+
+}
 
 resource "terraform_data" "webapp" {
   triggers_replace = [
@@ -91,7 +95,7 @@ resource "terraform_data" "webapp" {
     type        = "ssh"
     user        = "ec2-user"
     port        = "22"
-    host        = self.public_ip
+    host        = aws_instance.main[0].public_ip
     private_key = module.ssh_keys.private_key_openssh
   }
 }

@@ -42,9 +42,27 @@ variable "api_key" {
 #   description = "(Required) List of subnet IDs for EC2 instance deployments."
 # }
 #
-# variable "vpc_id" {
-#   type        = string
-#   description = "(Required) VPC ID of VPC for application deployment."
-# }
-
-
+variable "vpc_id" {
+  type        = string
+  description = "(Required) VPC ID of VPC for application deployment."
+}
+variable "tfe_organization" {
+  description = "The name of the TFE organization"
+  type        = string
+}
+variable "tfe_workspace_name" {
+  type        = string
+  description = "The name of the TFE workspace"
+}
+variable "data" {
+  type = object({
+    tfe_outputs = object({
+      networking = object({
+        nonsensitive_values = object({
+          public_subnets = list(string)
+        })
+      })
+    })
+  })
+  description = "Data object containing TFE outputs"
+}
