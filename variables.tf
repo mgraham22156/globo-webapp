@@ -36,6 +36,10 @@ variable "api_key" {
   type        = string
   description = "(Required) API key for web app to talk to SaaS platform."
 }
+variable "playbook_respository" {
+  type        = string
+  description = "(Required) URL of playbook repository."
+}
 
 variable "public_subnets" {
   type        = list(string)
