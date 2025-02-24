@@ -41,7 +41,6 @@ resource "aws_instance" "main" {
   tags = merge(local.common_tags, {
     "Name" = "${local.name_prefix}-webapp-${count.index}"
   })
-
   # Provisioner Stuff
   connection {
     type        = "ssh"
@@ -63,9 +62,7 @@ resource "aws_instance" "main" {
     ]
     on_failure = continue
   }
-
 }
-
 resource "null_resource" "webapp" {
 
   triggers = {
