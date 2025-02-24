@@ -38,10 +38,11 @@ locals {
 ##################################################################################
 
 resource "aws_instance" "main" {
-  count         = length(data.tfe_outputs.networking.nonsensitive_values.public_subnets)
+  count         = length(var.public_subnets)
   ami           = nonsensitive(data.aws_ssm_parameter.amzn2_linux.value)
   instance_type = var.instance_type
   subnet_id = var.data.tfe_outputs.networking.nonsensitive_values.public_subnets[0]
+
   vpc_security_group_ids = [
     aws_security_group.webapp_http_inbound_sg.id,
     aws_security_group.webapp_ssh_inbound_sg.id,
@@ -53,7 +54,6 @@ resource "aws_instance" "main" {
   tags = merge(local.common_tags, {
     "Name" = "${local.name_prefix}-webapp-${count.index}"
   })
-
   # Provisioner Stuff
   connection {
     type        = "ssh"
@@ -75,7 +75,6 @@ resource "aws_instance" "main" {
     ]
     on_failure = continue
   }
-
 }
 
 resource "terraform_data" "webapp" {
@@ -131,7 +130,7 @@ resource "aws_lb" "main" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.webapp_http_inbound_sg.id]
-  subnets            = data.tfe_outputs.networking.nonsensitive_values.public_subnets
+  subnets            = var.public_subnets
 
   enable_deletion_protection = false
 
