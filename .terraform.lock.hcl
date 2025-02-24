@@ -42,7 +42,6 @@ provider "registry.terraform.io/hashicorp/null" {
     "zh:f5c68199f2e6076bce92a12230434782bf768103a427e9bb9abee99b116af7b5",
   ]
 }
-
 provider "registry.terraform.io/hashicorp/tfe" {
   version     = "0.64.0"
   constraints = "~> 0.0"

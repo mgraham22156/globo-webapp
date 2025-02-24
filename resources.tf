@@ -1,3 +1,15 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    tfe = {
+      source  = "hashicorp/tfe"
+      version = "~> 0.0"
+    }
+  }
+}
 ##################################################################################
 # PROVIDERS
 ##################################################################################
@@ -29,7 +41,8 @@ resource "aws_instance" "main" {
   count         = length(var.public_subnets)
   ami           = nonsensitive(data.aws_ssm_parameter.amzn2_linux.value)
   instance_type = var.instance_type
-  subnet_id     = var.public_subnets[count.index]
+  subnet_id     = var.data.tfe_outputs.networking.nonsensitive_values.public_subnets[0]
+
   vpc_security_group_ids = [
     aws_security_group.webapp_http_inbound_sg.id,
     aws_security_group.webapp_ssh_inbound_sg.id,
@@ -63,13 +76,12 @@ resource "aws_instance" "main" {
     on_failure = continue
   }
 }
-resource "null_resource" "webapp" {
 
-  triggers = {
-    webapp_server_count = length(aws_instance.main.*.id)
-    web_server_names    = join(",", aws_instance.main.*.id)
-  }
-
+resource "terraform_data" "webapp" {
+  triggers_replace = [
+    length(aws_instance.main.*.id),
+    join(",", aws_instance.main.*.id),
+  ]
   provisioner "file" {
     content = templatefile("./templates/application.config.tpl", {
       hosts     = aws_instance.main.*.private_dns
@@ -78,7 +90,6 @@ resource "null_resource" "webapp" {
     })
     destination = "/home/ec2-user/application.config"
   }
-
   connection {
     type        = "ssh"
     user        = "ec2-user"
@@ -86,8 +97,33 @@ resource "null_resource" "webapp" {
     host        = aws_instance.main[0].public_ip
     private_key = module.ssh_keys.private_key_openssh
   }
-
 }
+
+# resource "null_resource" "webapp" {
+#
+#   triggers = {
+#     webapp_server_count = length(aws_instance.main.*.id)
+#     web_server_names    = join(",", aws_instance.main.*.id)
+#   }
+#
+#   provisioner "file" {
+#     content = templatefile("./templates/application.config.tpl", {
+#       hosts     = aws_instance.main.*.private_dns
+#       site_name = "${local.name_prefix}-taco-wagon"
+#       api_key   = var.api_key
+#     })
+#     destination = "/home/ec2-user/application.config"
+#   }
+#
+#   connection {
+#     type        = "ssh"
+#     user        = "ec2-user"
+#     port        = "22"
+#     host        = aws_instance.main[0].public_ip
+#     private_key = module.ssh_keys.private_key_openssh
+#   }
+#
+# }
 
 resource "aws_lb" "main" {
   name               = "${local.name_prefix}-webapp"
